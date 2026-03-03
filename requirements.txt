@@ -1,0 +1,9 @@
+streamlit
+birdnetlib
+librosa
+matplotlib
+plotly
+pandas
+tensorflow-cpu
+resampy
+soundfile
