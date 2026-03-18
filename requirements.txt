@@ -2,6 +2,8 @@
 # Install with: pip install -r requirements.txt
 # Python >= 3.10 required (bioacoustics-model-zoo constraint)
 
+setuptools==80.0.0
+
 # ── Core audio analysis ──────────────────────────────────────────────────────
 birdnetlib>=0.10.0              # BirdNET Python wrapper
 librosa>=0.10.0                 # Audio loading, mel spectrograms
