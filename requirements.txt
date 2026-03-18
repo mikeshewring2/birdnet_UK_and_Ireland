@@ -1,9 +1,31 @@
-streamlit
-birdnetlib
-librosa
-matplotlib
-plotly
-pandas
-tensorflow-cpu
-resampy
-soundfile
+# BirdNET UK/Ireland Analyzer (merged) — Python dependencies
+# Install with: pip install -r requirements.txt
+# Python >= 3.10 required (bioacoustics-model-zoo constraint)
+
+# ── Core audio analysis ──────────────────────────────────────────────────────
+birdnetlib>=0.10.0              # BirdNET Python wrapper
+librosa>=0.10.0                 # Audio loading, mel spectrograms
+soundfile>=0.12.0               # WAV clip extraction for audio players
+
+# ── Perch embeddings & similarity search ────────────────────────────────────
+bioacoustics-model-zoo>=0.12.0  # Wraps Perch (and BirdNET) with a clean API
+scipy>=1.11.0                   # cdist cosine similarity
+
+# ── Data, UI & visualisation ─────────────────────────────────────────────────
+streamlit>=1.35.0
+numpy>=1.24.0
+pandas>=2.0.0
+plotly>=5.20.0
+matplotlib>=3.8.0
+
+# ── Perch model backend ──────────────────────────────────────────────────────
+# Installed transitively by bioacoustics-model-zoo; pinned here for clarity.
+# Perch 2.0 requires tensorflow>=2.20 and a GPU.
+# For CPU-only deployments use Perch 1.x (bioacoustics-model-zoo will fall back)
+# or pin tensorflow==2.15.
+tensorflow>=2.15.0
+tensorflow>=2.15.0
+tensorflow_hub>=0.16.0
+
+# ── Optional: faster similarity search for very large batch libraries ────────
+# faiss-cpu>=1.8.0   # Uncomment if batches exceed ~10 hours of audio
