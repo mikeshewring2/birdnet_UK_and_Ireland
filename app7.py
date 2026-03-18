@@ -1,8 +1,9 @@
 # =============================================================================
 # BirdNET UK/Ireland Analyzer — merged
 #
-# App7: Merged version of app3 (analysis + sonogram explorer) and app6 (validation + batch DB).
-#
+# App6: Merged version of the original app and the v2 prototype, combining:
+#   • the original BirdNET analysis + sonogram explorer
+#   • with the new Perch classifier and Find Similar features.
 # =============================================================================
 
 import streamlit as st
@@ -43,7 +44,7 @@ except Exception as e:
 # =============================================================================
 
 st.set_page_config(page_title='Audio Analyzer', layout='wide')
-st.title('🦆 Audio Analyzer 🦉')
+st.title('🦆 Audio Analyzer: validation and batch processing')
 
 
 # =============================================================================
@@ -301,6 +302,7 @@ def run_perch_embeddings(file_path):
     if perch is None:
         return None, None
     emb_df        = perch.embed([str(file_path)])
+    #emb_df        = perch.generate_embeddings([str(file_path)])
     window_starts = emb_df.index.get_level_values('start_time').values
     emb_matrix    = emb_df.values.astype(np.float32)
     return window_starts, emb_matrix
@@ -322,29 +324,20 @@ def run_perch_classify(file_path, top_n=10):
     scores_df  = perch.predict([str(file_path)])
     detections = []
 
-    for row_idx, row in scores_df.iterrows():
-        # Extract start/end from index — handle both tuple and flat index
-        if isinstance(row_idx, tuple):
-            start = float(row_idx[1]) if len(row_idx) > 1 else 0.0
-            end   = float(row_idx[2]) if len(row_idx) > 2 else start + 5.0
-        else:
-            start = 0.0
-            end   = 5.0
-
+    for (_, start, end), row in scores_df.iterrows():
         # Normalise raw logits → probabilities within this window
-        norm    = _softmax(row.values)
+        norm = _softmax(row.values)
         top_idx = np.argsort(norm)[::-1][:top_n]
-
         for i in top_idx:
             score = float(norm[i])
-            if score < 0.01:
+            if score < 0.01:   # skip near-zero probabilities
                 break
             detections.append({
-                'common_name':     str(row.index[i]),
+                'common_name':     row.index[i],
                 'scientific_name': '',
                 'confidence':      score,
-                'start_time':      start,
-                'end_time':        end,
+                'start_time':      float(start),
+                'end_time':        float(end),
                 'model':           'Perch',
             })
 
@@ -413,7 +406,7 @@ else:
     st.sidebar.caption('No date filter — all species considered.')
 
 st.sidebar.subheader('Detection Settings')
-conf_threshold = st.sidebar.slider('Confidence Threshold', 0.1, 1.0, 0.6)
+conf_threshold = st.sidebar.slider('Confidence Threshold', 0.1, 1.0, 0.5)
 st.sidebar.caption('Lower = more detections but more false positives.')
 
 st.sidebar.subheader('Model Selection')
@@ -428,7 +421,7 @@ if PERCH_AVAILABLE:
             'Both: run in parallel — results tagged by model.'
         )
     )
-    use_perch = False   # Find Similar disabled — re-enable when adding manual timestamp search
+    use_perch = False   # Find Similar disabled — re-enable when adding manual timestamp search 
     # Embeddings toggle only shown when BirdNET-only is selected.
     # If Perch is running as classifier, embeddings are generated automatically.
     # if model_choice == 'BirdNET':
@@ -605,8 +598,8 @@ with tab_analysis:
                     y_audio, sr_audio = librosa.load(uf, sr=None)
                     audio_cache[uf.name] = (y_audio, sr_audio)
 
-                    # # Perch embeddings for Find Similar
-                    # # (free byproduct if Perch already ran; otherwise optional)
+                    # Perch embeddings for Find Similar
+                    # (free byproduct if Perch already ran; otherwise optional)
                     # if use_perch:
                     #     status_msg.info(
                     #         f'Generating Perch embeddings for {uf.name}…')
@@ -692,28 +685,19 @@ with tab_analysis:
             'Select a file and species to overlay detections. '
             'Scroll through long recordings with the window slider.')
 
-        ca, cb, cc = st.columns([1, 2, 1])
+        ca, cb = st.columns([1, 2])
         with ca:
             sono_file = st.selectbox(
                 'Select recording:',
                 options=list(audio_cache.keys()), key='sono_file')
-        with cc:
-            available_models = sorted(df['model'].unique()) if 'model' in df.columns else ['BirdNET']
-            sel_models = st.multiselect(
-                'Models to show:',
-                options=available_models,
-                default=available_models,
-                key='sono_models')
         with cb:
             file_sp = sorted(
-                df[(df['file_name'] == sono_file) &
-                   (df['model'].isin(sel_models) if 'model' in df.columns else True)
-                ]['common_name'].unique())
+                df[df['file_name'] == sono_file]['common_name'].unique())
             if file_sp:
                 sel_sp = st.multiselect(
                     'Species to overlay:',
                     options=file_sp,
-                    default=file_sp,
+                    default=file_sp[:3] if len(file_sp) >= 3 else file_sp,
                     key='sono_species')
             else:
                 sel_sp = []
@@ -743,7 +727,6 @@ with tab_analysis:
                 [d for d in all_detections
                  if d['file_name'] == sono_file
                  and d['common_name'] in sel_sp
-                 and d.get('model', 'BirdNET') in sel_models
                  and d['confidence'] >= min_conf_sono]
                 if sel_sp else [])
             fig_sono = plot_annotated_sonogram(
@@ -919,7 +902,7 @@ with tab_analysis:
         #                     with cc2:
         #                         if st.button('⬜ Reset', key=f'rst_{win_key}'):
         #                             set_vstatus(win_key, STATUS_UNREVIEWED)
-        #                             st.rerun()
+#                                    st.rerun()
 
     elif ('all_detections' in st.session_state
           and not st.session_state['all_detections']):
