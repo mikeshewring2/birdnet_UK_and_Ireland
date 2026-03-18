@@ -602,7 +602,7 @@ with tab_analysis:
 
                     # Load audio into cache for playback/sonograms
                     uf.seek(0)
-                    y_audio, sr_audio = librosa.load(uf, sr=None)
+                    y_audio, sr_audio = librosa.load(tmp_path, sr=None)
                     audio_cache[uf.name] = (y_audio, sr_audio)
 
                     # # Perch embeddings for Find Similar
