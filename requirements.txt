@@ -3,7 +3,7 @@
 # Python >= 3.10 required (bioacoustics-model-zoo constraint)
 
 setuptools==80.0.0
-
+wheel
 # ── Core audio analysis ──────────────────────────────────────────────────────
 birdnetlib>=0.10.0              # BirdNET Python wrapper
 librosa>=0.10.0                 # Audio loading, mel spectrograms
@@ -26,8 +26,8 @@ matplotlib>=3.8.0
 # For CPU-only deployments use Perch 1.x (bioacoustics-model-zoo will fall back)
 # or pin tensorflow==2.15.
 tensorflow>=2.15.0
-tensorflow>=2.15.0
-tensorflow_hub>=0.16.0
+tensorflow==2.15.0
+tensorflow_hub==0.16.0
 
 # ── Optional: faster similarity search for very large batch libraries ────────
 # faiss-cpu>=1.8.0   # Uncomment if batches exceed ~10 hours of audio
