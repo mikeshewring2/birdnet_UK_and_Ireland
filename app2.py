@@ -12,9 +12,8 @@
 #   Optional for Perch: pip install tensorflow tensorflow_hub bioacoustics-model-zoo
 #   Run with: streamlit run app2.py
 #
-# to do - add Perch embedding viewer + "find similar" function
+# 
 # to do - add option to save clips of detections    
-
 
 import streamlit as st
 import os
@@ -379,7 +378,10 @@ if PERCH_AVAILABLE:
             'Both: run in parallel — results tagged by model.'
         )
     )
-    use_perch = False  # Find Similar not yet wired up
+    use_perch = st.sidebar.toggle(
+        'Generate Perch embeddings (Find Similar)',
+        value=False,
+        help='Embeds every 5 s window — adds ~30 s per hour of audio.')
 else:
     model_choice = 'BirdNET'
     use_perch = False
@@ -519,6 +521,16 @@ with tab_analysis:
                     uf.seek(0)
                     y_audio, sr_audio = librosa.load(tmp_path, sr=None)
                     audio_cache[uf.name] = (y_audio, sr_audio)
+
+                    if use_perch:
+                        status_msg.info(f'Generating Perch embeddings for {uf.name}…')
+                        try:
+                            w_starts, emb_matrix = run_perch_embeddings(tmp_path)
+                            if emb_matrix is not None:
+                                emb_cache[uf.name] = (w_starts, emb_matrix, tmp_path)
+                                tmp_path = None  # keep file alive for clip extraction
+                        except Exception as e:
+                            st.warning(f'Perch embeddings failed for {uf.name}: {e}')
 
                 except Exception as e:
                     st.error(f'Error processing {uf.name}: {e}')
@@ -687,6 +699,104 @@ with tab_analysis:
             st.download_button('Download All Detections CSV',
                                data=df.to_csv(index=False).encode('utf-8'),
                                file_name='birdnet_detections_all.csv', mime='text/csv')
+
+        if emb_cache:
+            st.divider()
+            st.subheader('🔍 Find Similar Sounds')
+            st.caption(
+                'Pick any point in a recording — labelled or not — and find '
+                'acoustically similar windows across the file.')
+
+            sim_file = st.selectbox('Recording:', options=list(emb_cache.keys()),
+                                    key='sim_file')
+            w_starts, emb_matrix, tmp_path = emb_cache[sim_file]
+            total_emb = float(w_starts[-1]) + PERCH_WINDOW_SEC
+
+            query_time = st.slider(
+                'Query window start (s):',
+                min_value=0.0, max_value=total_emb,
+                value=0.0, step=PERCH_WINDOW_SEC, format='%.1fs',
+                key='sim_query_time')
+
+            # preview the selected window
+            y_sim, sr_sim = audio_cache[sim_file]
+            try:
+                fig_q, _ = plot_detection_sonogram(
+                    y_sim, sr_sim,
+                    {'start_time': query_time, 'end_time': query_time + PERCH_WINDOW_SEC,
+                     'common_name': 'query'}, pad=0.0)
+                st.pyplot(fig_q)
+                plt.close(fig_q)
+            except Exception:
+                pass
+            inline_player(tmp_path, query_time, query_time + PERCH_WINDOW_SEC)
+
+            top_n_sim = st.slider('Results to return:', 5, 20, 10, key='sim_top_n')
+
+            if st.button('🔍 Search', key='sim_search'):
+                st.session_state['similar_results'] = {
+                    'results': find_similar(query_time, w_starts, emb_matrix, top_n=top_n_sim),
+                    'tmp_path': tmp_path,
+                    'qfile': sim_file,
+                    'qtime': query_time,
+                }
+
+            sim_data = st.session_state.get('similar_results')
+            if sim_data and sim_data.get('qfile') == sim_file:
+                similar = sim_data['results']
+                st.write(f'**{len(similar)} windows most similar to {sim_file} @ {sim_data["qtime"]:.1f}s:**')
+
+                for _, row in similar.iterrows():
+                    win_key = f"sim|{sim_file}|{row['window_start']}"
+                    cur_status = get_vstatus(win_key)
+                    icon = '✅' if cur_status == STATUS_ACCEPTED else '❌' if cur_status == STATUS_REJECTED else '⬜'
+
+                    with st.expander(f"{icon} {row['window_start']:.1f}s — {row['window_end']:.1f}s  "
+                                     f"|  Similarity: {row['similarity_pct']:.1f}%"):
+                        inline_player(sim_data['tmp_path'], row['window_start'], row['window_end'])
+
+                        try:
+                            fig_r, _ = plot_detection_sonogram(
+                                audio_cache[sim_file][0], audio_cache[sim_file][1],
+                                {'start_time': row['window_start'],
+                                 'end_time': row['window_end'],
+                                 'common_name': ''}, pad=0.5)
+                            st.pyplot(fig_r)
+                            plt.close(fig_r)
+                        except Exception:
+                            pass
+
+                        notes_sim = st.text_input('Species / notes:',
+                                                   key=f'simnotes_{win_key}',
+                                                   placeholder='e.g. Curlew — faint bubbling call')
+
+                        sc1, sc2, sc3 = st.columns(3)
+                        with sc1:
+                            if st.button('✅ Accept', key=f'sima_{win_key}'):
+                                set_vstatus(win_key, STATUS_ACCEPTED)
+                                if save_to_db:
+                                    insert_detection_db(
+                                        batch_id=session_batch_id,
+                                        file_name=sim_file,
+                                        start_time=row['window_start'],
+                                        end_time=row['window_end'],
+                                        common_name=notes_sim or 'Unknown',
+                                        scientific_name='',
+                                        confidence=float(row['similarity_pct']) / 100,
+                                        lat=lat, lon=lon,
+                                        rec_date=str(rec_date) if rec_date else '',
+                                        source='perch_similar',
+                                        verified=STATUS_ACCEPTED,
+                                        notes=notes_sim)
+                                st.rerun()
+                        with sc2:
+                            if st.button('❌ Reject', key=f'simr_{win_key}'):
+                                set_vstatus(win_key, STATUS_REJECTED)
+                                st.rerun()
+                        with sc3:
+                            if st.button('⬜ Reset', key=f'simrst_{win_key}'):
+                                set_vstatus(win_key, STATUS_UNREVIEWED)
+                                st.rerun()
 
     elif 'all_detections' in st.session_state and not st.session_state['all_detections']:
         st.warning('No detections found. Try lowering the confidence threshold.')
