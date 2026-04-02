@@ -16,10 +16,10 @@
 # to do - add option to save clips of detections    
 
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-os.environ['TF_NUM_INTEROP_THREADS'] = '1'
-os.environ['TF_NUM_INTRAOP_THREADS'] = '1'
-os.environ['OMP_NUM_THREADS'] = '1'
+#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+#os.environ['TF_NUM_INTEROP_THREADS'] = '1'
+#os.environ['TF_NUM_INTRAOP_THREADS'] = '1'
+#os.environ['OMP_NUM_THREADS'] = '1'
 
 import streamlit as st
 import os
@@ -41,8 +41,8 @@ import soundfile as sf
 from scipy.spatial.distance import cdist
 
 from birdnetlib import Recording
-#from birdnetlib.analyzer import Analyzer
-from birdnetlib.analyzer import LiteAnalyzer
+from birdnetlib.analyzer import Analyzer
+#from birdnetlib.analyzer import LiteAnalyzer
 
 try:
     import bioacoustics_model_zoo as bmz
@@ -54,13 +54,6 @@ except Exception as e:
     PERCH_AVAILABLE = False
     PERCH_ERROR = str(e)
 
-# Limit TF threading to reduce memory during inference
-try:
-    import tensorflow as tf
-    tf.config.threading.set_inter_op_parallelism_threads(1)
-    tf.config.threading.set_intra_op_parallelism_threads(1)
-except Exception:
-    pass
 
 
 MAX_FILE_MB = 500
@@ -182,8 +175,8 @@ def get_batch_ids():
 
 @st.cache_resource
 def load_analyzer():
-    #return Analyzer()
-    return LiteAnalyzer()
+    return Analyzer()
+    #return LiteAnalyzer()
 
 
 @st.cache_resource
