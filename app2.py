@@ -41,7 +41,8 @@ import soundfile as sf
 from scipy.spatial.distance import cdist
 
 from birdnetlib import Recording
-from birdnetlib.analyzer import Analyzer
+#from birdnetlib.analyzer import Analyzer
+from birdnetlib.analyzer import LiteAnalyzer
 
 try:
     import bioacoustics_model_zoo as bmz
@@ -181,7 +182,8 @@ def get_batch_ids():
 
 @st.cache_resource
 def load_analyzer():
-    return Analyzer()
+    #return Analyzer()
+    return LiteAnalyzer()
 
 
 @st.cache_resource
