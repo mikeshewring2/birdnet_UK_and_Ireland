@@ -442,7 +442,7 @@ with tab_analysis:
         with col2:
             try:
                 preview_file.seek(0)
-                y_full, sr_full = librosa.load(preview_file, sr=None)
+                y_full, sr_full = librosa.load(preview_file, sr=None, duration=300, res_type='kaiser_fast')
                 total_dur = librosa.get_duration(y=y_full, sr=sr_full)
                 window_size = st.select_slider('Sonogram window size (s):',
                                                options=[30, 60, 120, 300], value=60)
@@ -519,7 +519,7 @@ with tab_analysis:
                             st.warning(f'Perch classification failed for {uf.name}: {e}')
 
                     uf.seek(0)
-                    y_audio, sr_audio = librosa.load(tmp_path, sr=None)
+                    y_audio, sr_audio = librosa.load(tmp_path, sr=None, duration=300, res_type='kaiser_fast')
                     audio_cache[uf.name] = (y_audio, sr_audio)
 
                     if use_perch:
