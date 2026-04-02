@@ -254,12 +254,17 @@ def inline_player(file_path, start_sec, end_sec):
 # --- analysis ---
 
 def run_birdnet(file_path, lat, lon, conf, use_date, rec_date, rec_time):
+    st.write(f"DEBUG: starting analysis of {file_path}")
     analyzer = load_analyzer()
+    st.write("DEBUG: analyzer loaded")
     kwargs = dict(lat=lat, lon=lon, min_conf=conf)
+    st.write(f"DEBUG: kwargs = {kwargs}")
     if use_date and rec_date:
         kwargs['date'] = datetime.combine(rec_date, rec_time)
     recording = Recording(analyzer, str(file_path), **kwargs)
+    st.write("DEBUG: recording created")
     recording.analyze()
+    st.write("DEBUG: analysis complete")
     return recording.detections
 
 
