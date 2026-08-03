@@ -1,0 +1,16 @@
+# Community Cloud recognises only ONE config file, and it must be at the
+# repository ROOT even when the entrypoint lives in a subdirectory.
+#
+# NOTE: this file also applies when you run app2.py locally from the repo root,
+# so maxUploadSize is kept at app2.py's own limit rather than the demo's.
+# The web demo enforces its stricter 25 MB cap in code instead.
+
+[server]
+maxUploadSize = 500
+
+[theme]
+base = "light"
+primaryColor = "#2e7d32"
+
+[browser]
+gatherUsageStats = false

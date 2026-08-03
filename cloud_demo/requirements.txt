@@ -1,0 +1,37 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# WEB DEMO dependencies — Streamlit Community Cloud only.
+#
+# This file is intentionally NOT the same as the root requirements.txt, which
+# supports the full desktop app (app2.py) including Perch.
+#
+# Community Cloud resolves dependency files from the entrypoint's directory
+# first, so this file takes precedence over the one in the repository root.
+#
+# REQUIRES PYTHON 3.11 — set this in the app's Advanced settings when deploying.
+# tflite-runtime publishes no wheels for 3.12 or 3.13.
+#
+# Deliberately EXCLUDED:
+#   tensorflow / tensorflow_hub / bioacoustics-model-zoo
+#     bioacoustics-model-zoo pulls in opensoundscape and therefore PyTorch.
+#     Loading torch and TensorFlow into one process on Community Cloud causes
+#     a segfault at import (duplicate OpenMP runtimes), which cannot be caught
+#     by a try/except because the process dies in the C loader.
+# ─────────────────────────────────────────────────────────────────────────────
+
+setuptools
+wheel
+
+# ── Core audio analysis ──────────────────────────────────────────────────────
+birdnetlib>=0.10.0
+tflite-runtime==2.14.0          # BirdNET inference backend (~2 MB vs ~600 MB for TF)
+librosa>=0.10.0
+soundfile>=0.12.0
+resampy>=0.4.0
+
+# ── Data, UI & visualisation ─────────────────────────────────────────────────
+streamlit>=1.35.0
+numpy>=1.24,<2                  # tflite-runtime 2.14 is built against NumPy 1.x
+pandas>=2.0.0
+scipy>=1.11.0
+plotly>=5.20.0
+matplotlib>=3.8.0

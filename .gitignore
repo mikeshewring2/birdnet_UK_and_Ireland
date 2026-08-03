@@ -1,3 +1,29 @@
 birdnet-env/
+drive-download-20260303T161353Z-3-001/
+superceded/
 birdnet_results.db
 test.wav
+# Environments
+birdnet-env/
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Local data & scratch
+drive-download-*/
+superceded/
+birdnet_results.db
+birdnet_demo.db
+*.db
+test.wav
+
+# Secrets — never commit
+.streamlit/secrets.toml
+
+# OS
+.DS_Store
+Thumbs.db
